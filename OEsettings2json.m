@@ -5,6 +5,20 @@
 [~, name0,~] = fileparts(File);
 name0       = extractAfter(name0,'settings'); % grab
 OEinfo      = xml2struct(fullfile(Path,File));
+
+% xml parserer to structure won't retain the order of the channels as in the xml, making the wrong channel map > use
+% raw text reader instead
+
+xmlText = fileread("settings.xml");
+expr = '<(?<type>[!?/]?)(?<name>[\w:.-]+)(?<attributes>[^>]*)>(?<content>[^<]*)';
+tokens  = regexp(xmlText, expr, 'names');
+indxChn = contains({tokens.name},'CHANNELS','IgnoreCase',false);
+allChnsTxt = tokens(indxChn).attributes;
+chNumbers = regexp(allChnsTxt, 'CH(\d+)','tokens');
+chNumbers = str2double([chNumbers{:}]);                                     % actual channel order
+shankNum = regexp(allChnsTxt, ':(\d+)', 'tokens');
+shankNum = str2double([shankNum{:}]);                                       % Convert from cell array to numeric vector
+
 probeinfo   = OEinfo.SETTINGS.SIGNALCHAIN.PROCESSOR{1,1}.EDITOR;
 if ~contains(probeinfo.Attributes.displayName,'Neuropix-PXI')
     error('probe info does not contain "Neuropix-PXI", but %s?',probeinfo.Attributes.displayName)
@@ -27,21 +41,36 @@ if isequal(chnsC,chnsX) && isequal(chnsC,chnsY)
 
     chns        = cellfun(@(x) strrep(x, 'CH', ''), chnsC, 'UniformOutput', false);
     chMap0ind   = str2double(chns);
+    
+    if ~numel(chNumbers) == numel(chMap0ind)
+        error('number of channel mismatch %d vs %d, check settings.xml file',numel(chNumbers),numel(chMap0ind))
+    else
+
+        sortedChns = zeros(size(chNumbers));
+        for i = 1:length(chNumbers)
+            sortedChns(i) = find(chMap0ind == chNumbers(i));
+        end
+    end
+
     xcoords     = nan(numel(chMap0ind),1);
     for c1 = 1:numel(chnsC)
         xcoords(c1,1) = str2double(xc.(chnsC{c1}));
     end
+    xcoords = xcoords(sortedChns);
 
     ycoords     = nan(numel(chMap0ind),1);
     for c2 = 1:numel(chnsC)
         ycoords(c2,1) = str2double(yc.(chnsC{c2}));
     end
+    
+    ycoords = ycoords(sortedChns);
+
     cmap        = winter(numel(chMap0ind));
     f1          = figure('Name','Probe','Color','w','NumberTitle','off','Position',[295 50 649 946],'Renderer','painters'); 
     scatter(xcoords,ycoords,50,cmap,'s', 'filled');
     axis('equal')
     allxpos     = sort(unique(xcoords));
-   
+    
     groups      = [allxpos,zeros(size(allxpos))];  % Start all in group 0
     groupN      = 0;
 
