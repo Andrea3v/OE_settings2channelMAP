@@ -1,6 +1,7 @@
 % converts settings.xml file gen by Open Ephys during recordings to channel map for Kilosort
-% chan map is saved as .json and .mat
+% chan map is saved as .json and .mat 
 
+clc; clear; close all
 [File,Path] = uigetfile({'*.xml'},'select OE settings.xml file','D:\channelmaps');
 [~, name0,~] = fileparts(File);
 name0       = extractAfter(name0,'settings'); % grab
