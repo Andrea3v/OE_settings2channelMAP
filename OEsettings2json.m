@@ -9,7 +9,7 @@ OEinfo      = xml2struct(fullfile(Path,File));
 % xml parserer to structure won't retain the order of the channels as in the xml, making the wrong channel map > use
 % raw text reader instead
 
-xmlText = fileread("settings.xml");
+xmlText = fileread(fullfile(Path,File));
 expr = '<(?<type>[!?/]?)(?<name>[\w:.-]+)(?<attributes>[^>]*)>(?<content>[^<]*)';
 tokens  = regexp(xmlText, expr, 'names');
 indxChn = contains({tokens.name},'CHANNELS','IgnoreCase',false);
